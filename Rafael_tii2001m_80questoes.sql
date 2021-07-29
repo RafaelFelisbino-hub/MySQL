@@ -423,21 +423,16 @@ DELIMITER //
 CREATE FUNCTION valorTotalItens(cod INT)
 RETURNS VARCHAR(55) 
 BEGIN
-DECLARE quantidade FLOAT;
-DECLARE valor FLOAT;
-DECLARE res FLOAT;
-SET res = 0;
-SET quantidade = 0;
-SET valor = 0;
+DECLARE quantidade, valor, res FLOAT;
+SET res = 0, quantidade = 0, valor = 0;
 SELECT qtd_item INTO quantidade FROM itens_de_venda WHERE cod = itens_de_venda.cod_produto;
-SELECT valor INTO valor FROM itens_de_venda WHERE cod = itens_de_venda.cod_produto;
+SELECT valor_item INTO valor FROM itens_de_venda WHERE cod = itens_de_venda.cod_produto;
 SET res = res + (valor * quantidade);
 RETURN 
-	(SELECT CONCAT('Produto: ',produto_cod_produto, ' Valor total: ',res) FROM itens_de_venda WHERE cod = itens_de_venda.cod_produto);
+	-- (SELECT CONCAT('Produto: ',produto_cod_produto, ' Valor total: ',res) FROM itens_de_venda WHERE cod = itens_de_venda.cod_produto);
+    (select res FROM itens_de_venda WHERE cod = itens_de_venda.cod_produto);
 END; //
 
 DELIMITER ;
 
-SELECT valorTotalItens(4);
-drop function valorTotalItens;
-select * from itens_de_venda;
+SELECT valorTotalItens(1);
