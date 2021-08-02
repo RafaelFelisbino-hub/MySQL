@@ -111,39 +111,52 @@ CREATE TABLE cupom_fiscal (
 	id_cupom_fiscal INT AUTO_INCREMENT,
     data_venda DATE,
     produto_vendido VARCHAR(45),
+    quantidade_venda INT,
     valor_pedido FLOAT,
     forma_pagamento VARCHAR(45),
     caixa_id_caixa INT,
     PRIMARY KEY(id_cupom_fiscal),
     FOREIGN KEY(caixa_id_caixa) REFERENCES caixa (id_caixa)
 );
-
+select * from cupom_fiscal;
 INSERT INTO cupom_fiscal VALUES 
-(DEFAULT, "2021/08/01", "Molho de tomate", 1.69, "Dinheiro", 1),
-(DEFAULT, "2021/08/01", "Detergentee", 1.89, "Dinheiro", 2),
-(DEFAULT, "2021/08/01", "Lava roupas", 11.90, "Dinheiro", 3);
+(DEFAULT, "2021/08/01", "Molho de tomate", 1, 1.69, "Dinheiro", 1),
+(DEFAULT, "2021/08/01", "Detergentee", 2, 1.89, "Dinheiro", 2),
+(DEFAULT, "2021/08/01", "Lava roupas", 2, 11.90, "Dinheiro", 3);
 
 -- Consulta de todos os funcionários e para quem respondem:
+CREATE VIEW vw_funcionarios AS 
 SELECT nome_gerente AS Gerente, nome_subgerente AS Subgerente, nome_operario AS Operador_de_caixa
 FROM gerente
 INNER JOIN operario ON operario.gerente_id_gerente = gerente.id_gerente
 INNER JOIN subgerente ON subgerente.gerente_id_gerente = gerente.id_gerente
 WHERE id_gerente = 1;
 
+SELECT * FROM vw_funcionarios;
+
 -- Consulta de qual caixa vendeu quais produtos, o valor e método de pagamento:
+CREATE VIEW caixa AS
 SELECT operario_id_operario AS Operário, produto_vendido AS Produto, 
 valor_pedido AS Valor_venda, forma_pagamento AS Pagamento
 FROM caixa
 INNER JOIN cupom_fiscal ON cupom_fiscal.caixa_id_caixa = caixa.id_caixa;
 
+SELECT * FROM vw_caixa;
+
 -- Consulta dos produtos em estoque:
+CREATE VIEW vw_estoque AS
 SELECT nome_produto AS Produto, quantidade AS Quantidade, categoria_produto AS Categoria,
 valor_produto AS Valor_Unitário FROM estoque;
 
+SELECT * FROM vw_estoque;
+
 -- Consulta de qual operário trabalha em qual caixa:
+CREATE VIEW vw_operario AS
 SELECT nome_operario AS Operário, id_caixa AS Caixa
 FROM caixa
 INNER JOIN operario ON caixa.operario_id_operario = operario.id_operario;
+
+SELECT * FROM vw_operario;
 
 -- Consulta do valor no caixa e o valor retirado do caixa:
 SELECT valor_caixa AS Valor_caixa, valor_retirada AS Valor_retirado
@@ -151,15 +164,28 @@ FROM retirada_caixa
 RIGHT JOIN caixa ON retirada_caixa.caixa_id_caixa = caixa.id_caixa;
 
 -- Consulta das compras feitas pela subgerente e de qual fornecedor:
+CREATE VIEW vw_compras AS
 SELECT nome_subgerente AS Subgerente, nome_produto AS Produto, valor_compra AS Valor
 FROM compras
 RIGHT JOIN subgerente ON compras.subgerente_id_subgerente = subgerente.id_subgerente
 RIGHT JOIN fornecedor ON fornecedor_id_fornecedor = fornecedor.id_fornecedor;
 
+SELECT * FROM vw_compras;
+
 -- Consultar o prazo de pagamento de compras realizadas:
+CREATE VIEW vw_prazo_pagamento AS
 SELECT prazo_pagamento AS Prazo, id_compra AS Número_compra, nome_subgerente AS Responsável
 FROM compras
 RIGHT JOIN subgerente ON compras.subgerente_id_subgerente = subgerente.id_subgerente;
+
+SELECT * FROM vw_prazo_pagamento;
+
+-- Consulta de um produto se seu estoque for menor que 100:
+CREATE VIEW vw_situacao_estoque AS
+SELECT nome_produto AS Produto, IF(quantidade < 100, "Em falta", "OK") AS Situação, quantidade AS Quantidade
+FROM estoque;
+
+SELECT * FROM vw_situacao_estoque;
 
 -- Trigger para atualizar o valor retirado do caixa sempre que o caixa atingir R$ 1000
 DELIMITER //
@@ -174,11 +200,32 @@ BEGIN
 END; //
 
 DELIMITER ;
-SELECT * FROM retirada_caixa;
+UPDATE caixa SET valor_caixa = 900 WHERE id_caixa = 2;
 
--- Consulta de um produto se seu estoque for menor que 100:
-SELECT nome_produto AS Produto, IF(quantidade < 100, "Em falta", "OK") AS Situação, quantidade AS Quantidade
-FROM estoque;
+-- Trigger para atualizar o estoque ao realizar uma compra
+DELIMITER //
+CREATE TRIGGER tr_quantidade_estoque AFTER INSERT
+ON compras
+FOR EACH ROW
+BEGIN
+	UPDATE estoque SET quantidade = quantidade + NEW.quantidade_compra
+    WHERE NEW.nome_produto = estoque.nome_produto;
+END; //
+DELIMITER ;
 
--- FAZER TRIGGER PARA COMPRAS / ESTOQUE
--- FAZER TRIGGER PARA VENDAS / ESTOQUE
+INSERT INTO compras VALUES
+(DEFAULT, "Molho de tomate", 4, "Alimentação", 6.76, "2021/08/15", 1, 1);
+
+-- Trigger para atualizar o estoque ao realizar uma venda
+DELIMITER //
+CREATE TRIGGER tr_quantidade_estoque_venda AFTER INSERT
+ON cupom_fiscal
+FOR EACH ROW
+BEGIN
+	UPDATE estoque SET quantidade = quantidade - NEW.quantidade_venda
+	WHERE NEW.produto_vendido = estoque.nome_produto;
+END; //
+DELIMITER ;
+
+INSERT INTO cupom_fiscal VALUES 
+(DEFAULT, "2021/08/01", "Molho de tomate", 3, 1.69, "Dinheiro", 1);
