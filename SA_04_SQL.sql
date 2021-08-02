@@ -159,9 +159,12 @@ INNER JOIN operario ON caixa.operario_id_operario = operario.id_operario;
 SELECT * FROM vw_operario;
 
 -- Consulta do valor no caixa e o valor retirado do caixa:
+CREATE VIEW vw_valor_caixa AS
 SELECT valor_caixa AS Valor_caixa, valor_retirada AS Valor_retirado
 FROM retirada_caixa
 RIGHT JOIN caixa ON retirada_caixa.caixa_id_caixa = caixa.id_caixa;
+
+SELECT * FROM vw_valor_caixa;
 
 -- Consulta das compras feitas pela subgerente e de qual fornecedor:
 CREATE VIEW vw_compras AS
@@ -228,4 +231,4 @@ END; //
 DELIMITER ;
 
 INSERT INTO cupom_fiscal VALUES 
-(DEFAULT, "2021/08/01", "Molho de tomate", 3, 1.69, "Dinheiro", 1);
+(DEFAULT, "2021/08/01", "Molho de tomate", 3, 5.07, "Dinheiro", 1);
