@@ -9,8 +9,6 @@ CREATE TABLE gerente (
 );
 
 INSERT INTO gerente VALUES (DEFAULT, "Rafael");
-CREATE USER gerente@'localhost' IDENTIFIED BY '123';
-GRANT ALL ON sevendetudo_db.* TO gerente@'localhost' WITH GRANT OPTION;
 
 CREATE TABLE subgerente (
 	id_subgerente INT AUTO_INCREMENT,
@@ -160,7 +158,7 @@ SELECT * FROM vw_operario;
 
 -- Consulta do valor no caixa e o valor retirado do caixa:
 CREATE VIEW vw_valor_caixa AS
-SELECT valor_caixa AS Valor_caixa, valor_retirada AS Valor_retirado
+SELECT valor_caixa AS Valor_caixa, valor_retirada AS Valor_retirado, id_caixa
 FROM retirada_caixa
 RIGHT JOIN caixa ON retirada_caixa.caixa_id_caixa = caixa.id_caixa;
 
@@ -168,10 +166,10 @@ SELECT * FROM vw_valor_caixa;
 
 -- Consulta das compras feitas pela subgerente e de qual fornecedor:
 CREATE VIEW vw_compras AS
-SELECT nome_subgerente AS Subgerente, nome_produto AS Produto, valor_compra AS Valor
+SELECT nome_subgerente AS Subgerente, nome_produto AS Produto, quantidade_compra AS Quantidade, valor_compra AS Valor, nome_fornecedor AS Fornecedor
 FROM compras
-RIGHT JOIN subgerente ON compras.subgerente_id_subgerente = subgerente.id_subgerente
-RIGHT JOIN fornecedor ON fornecedor_id_fornecedor = fornecedor.id_fornecedor;
+INNER JOIN subgerente ON compras.subgerente_id_subgerente = subgerente.id_subgerente
+INNER JOIN fornecedor ON fornecedor_id_fornecedor = fornecedor.id_fornecedor;
 
 SELECT * FROM vw_compras;
 
@@ -232,3 +230,34 @@ DELIMITER ;
 
 INSERT INTO cupom_fiscal VALUES 
 (DEFAULT, "2021/08/01", "Molho de tomate", 3, 5.07, "Dinheiro", 1);
+
+-- Roles, usuários e permissões
+CREATE USER gerente@'localhost' IDENTIFIED BY '123';
+GRANT ALL ON sevendetudo_db.* TO gerente@'localhost' WITH GRANT OPTION;
+
+CREATE USER subgerente@'localhost' IDENTIFIED BY '123';
+GRANT SELECT, INSERT, UPDATE, DELETE ON sevendetudo_db.* TO subgerente@'localhost';
+
+CREATE USER caixa1@'localhost' IDENTIFIED BY '123';
+CREATE USER caixa2@'localhost' IDENTIFIED BY '123';
+CREATE USER caixa3@'localhost' IDENTIFIED BY '123';
+
+CREATE ROLE operador_caixa;
+GRANT SELECT, INSERT, UPDATE on sevendetudo_db.caixa TO operador_caixa;
+GRANT operador_caixa TO caixa1@'localhost', caixa2@'localhost', caixa3@'localhost';
+SET DEFAULT ROLE operador_caixa FOR caixa1@'localhost';
+SET DEFAULT ROLE operador_caixa FOR caixa2@'localhost';
+SET DEFAULT ROLE operador_caixa FOR caixa3@'localhost';
+
+-- Função para entrada de caixa, entrada somente feita se o valor do caixa for 0
+DELIMITER //
+CREATE FUNCTION fn_entrada_caixa (valor FLOAT, id INT)
+RETURNS FLOAT
+BEGIN
+	UPDATE caixa SET valor_caixa = IF(valor_caixa = 0, valor, valor_caixa) WHERE id = id_caixa;
+RETURN (valor);
+END; //
+DELIMITER ;
+
+select fn_entrada_caixa(200, 2) AS Valor_de_entrada;
+SELECT * FROM caixa;
